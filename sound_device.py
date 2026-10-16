@@ -7,7 +7,8 @@ import streamlit as st
 
 st.title("🎙️ Auto Noise Reduction App")
 st.write(
-    "Record audio, and noise reduction is applied automatically right away!"
+    "Record audio, noise reduction is applied automatically, and manage past"
+    " sessions easily!"
 )
 
 # Create a folder for recordings
@@ -38,7 +39,7 @@ if audio_file is not None:
 
   st.success("✨ Recording saved and noise reduction applied automatically!")
 
-  # Display latest recording side-by-side
+  # Display latest audio players and side-by-side download buttons
   col1, col2 = st.columns(2)
 
   with col1:
@@ -69,53 +70,65 @@ if audio_file is not None:
 st.markdown("---")
 st.subheader("📂 Past Recording Sessions")
 
-all_files = os.listdir("saved_recordings")
-timestamps = sorted(
-    [
-        f.replace("noisy_", "").replace(".wav", "")
-        for f in all_files
-        if f.startswith("noisy_")
-    ],
-    reverse=True,
-)
-
-if timestamps:
-  selected_session = st.selectbox(
-      "Select a past session:",
-      timestamps,
-      format_func=lambda x: f"Session: {x[:4]}-{x[4:6]}-{x[6:8]} at {x[9:11]}:{x[11:13]}:{x[13:15]}",
+if os.path.exists("saved_recordings"):
+  all_files = os.listdir("saved_recordings")
+  timestamps = sorted(
+      [
+          f.replace("noisy_", "").replace(".wav", "")
+          for f in all_files
+          if f.startswith("noisy_")
+      ],
+      reverse=True,
   )
 
-  if selected_session:
-    noisy_path = f"saved_recordings/noisy_{selected_session}.wav"
-    cleaned_path = f"saved_recordings/cleaned_{selected_session}.wav"
+  if timestamps:
+    selected_session = st.selectbox(
+        "Choose a session to view or download:",
+        timestamps,
+        format_func=lambda x: f"Session: {x[:4]}-{x[4:6]}-{x[6:8]} at {x[9:11]}:{x[11:13]}:{x[13:15]}",
+        key="past_session_select",
+    )
 
-    col1, col2 = st.columns(2)
+    if selected_session:
+      noisy_path = os.path.join(
+          "saved_recordings", f"noisy_{selected_session}.wav"
+      )
+      cleaned_path = os.path.join(
+          "saved_recordings", f"cleaned_{selected_session}.wav"
+      )
 
-    with col1:
-      st.markdown("### 🔊 Original Noisy")
-      if os.path.exists(noisy_path):
-        st.audio(noisy_path, format="audio/wav")
-        with open(noisy_path, "rb") as f:
-          st.download_button(
-              label="📥 Download Noisy",
-              data=f,
-              file_name=f"noisy_{selected_session}.wav",
-              mime="audio/wav",
-              key=f"hist_noisy_{selected_session}",
-          )
+      col1, col2 = st.columns(2)
 
-    with col2:
-      st.markdown("### 🎧 Cleaned Audio")
-      if os.path.exists(cleaned_path):
-        st.audio(cleaned_path, format="audio/wav")
-        with open(cleaned_path, "rb") as f:
-          st.download_button(
-              label="📥 Download Cleaned",
-              data=f,
-              file_name=f"cleaned_{selected_session}.wav",
-              mime="audio/wav",
-              key=f"hist_cleaned_{selected_session}",
-          )
+      with col1:
+        st.markdown("### 🔊 Original Noisy")
+        if os.path.exists(noisy_path):
+          st.audio(noisy_path, format="audio/wav")
+          with open(noisy_path, "rb") as f:
+            st.download_button(
+                label="📥 Download Noisy",
+                data=f,
+                file_name=f"noisy_{selected_session}.wav",
+                mime="audio/wav",
+                key=f"hist_noisy_{selected_session}",
+            )
+        else:
+          st.warning("Noisy file not found.")
+
+      with col2:
+        st.markdown("### 🎧 Cleaned Audio")
+        if os.path.exists(cleaned_path):
+          st.audio(cleaned_path, format="audio/wav")
+          with open(cleaned_path, "rb") as f:
+            st.download_button(
+                label="📥 Download Cleaned",
+                data=f,
+                file_name=f"cleaned_{selected_session}.wav",
+                mime="audio/wav",
+                key=f"hist_cleaned_{selected_session}",
+            )
+        else:
+          st.warning("Cleaned file not found.")
+  else:
+    st.info("No past sessions found yet.")
 else:
-  st.info("No recordings saved yet.")
+  st.info("No recordings directory found.")
