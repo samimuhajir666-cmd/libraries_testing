@@ -5,10 +5,8 @@ import numpy as np
 import soundfile as sf
 import streamlit as st
 
-st.title("🎙️ Multi-Recording Noise Reduction App")
-st.write(
-    "Record audio, clean background noise, and download your files instantly!"
-)
+st.title("🎙️ Noise Reduction App")
+st.write("Record, clean, and manage your audio cleanly.")
 
 # Create a folder for recordings
 os.makedirs("saved_recordings", exist_ok=True)
@@ -34,15 +32,6 @@ if audio_file is not None:
   st.subheader("🔊 Current Recorded Audio:")
   st.audio(noisy_filename, format="audio/wav")
 
-  # Download button for noisy file
-  with open(noisy_filename, "rb") as f:
-    st.download_button(
-        label="📥 Download Noisy Audio",
-        data=f,
-        file_name=f"noisy_{timestamp}.wav",
-        mime="audio/wav",
-    )
-
   if st.button("🧹 Reduce Noise and Save"):
     with st.spinner("⏳ Reducing noise..."):
       # Apply noise reduction
@@ -51,42 +40,29 @@ if audio_file is not None:
       # Save clean audio
       sf.write(cleaned_filename, reduced_audio, rate)
 
-      st.success(
-          f"✨ Success! Cleaned file has been saved: `{cleaned_filename}`"
-      )
-
-      st.subheader("🎧 Cleaned Audio Output:")
+      st.success("✨ Cleaned file saved successfully!")
       st.audio(cleaned_filename, format="audio/wav")
 
-      # Download button for cleaned file
-      with open(cleaned_filename, "rb") as f:
-        st.download_button(
-            label="📥 Download Cleaned Audio",
-            data=f,
-            file_name=f"cleaned_{timestamp}.wav",
-            mime="audio/wav",
-        )
-
-# --- List of All Saved Recordings ---
+# --- Clean History Section (Using a Dropdown instead of a messy list) ---
 st.markdown("---")
-st.subheader("📂 All Your Saved Recordings:")
+st.subheader("📂 Saved Recordings History")
 
 saved_files = sorted(os.listdir("saved_recordings"), reverse=True)
 
 if saved_files:
-  for file in saved_files:
-    file_path = os.path.join("saved_recordings", file)
-    st.text(file)
+  # Selectbox keeps the UI clean by showing only one file's options at a time
+  selected_file = st.selectbox("Select a recording to view:", saved_files)
+
+  if selected_file:
+    file_path = os.path.join("saved_recordings", selected_file)
     st.audio(file_path)
 
-    # Add download button for each file in the history list
     with open(file_path, "rb") as f:
       st.download_button(
-          label=f"📥 Download {file}",
+          label=f"📥 Download {selected_file}",
           data=f,
-          file_name=file,
+          file_name=selected_file,
           mime="audio/wav",
-          key=file,  # Unique key for each button in the loop
       )
 else:
   st.info("No recordings saved yet.")
