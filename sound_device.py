@@ -5,18 +5,18 @@ import streamlit as st
 
 st.title("🎙️ Noise Cancellation from noisereduce library")
 st.write(
-    "Neeche diye gaye button se audio record karein aur wind noise hatayein!"
+    "record your voice from this botton!"
 )
 
 # Streamlit ka built-in audio recorder (Cloud aur Mobile dono par perfectly chalta hai)
-audio_file = st.audio_input("🔴 Yahan click karke recording shuru karein:")
+audio_file = st.audio_input("🔴 click here to record your voice :")
 
 if audio_file is not None:
   st.subheader("🔊 Original Noisy Audio:")
   st.audio(audio_file, format="audio/wav")
 
-  if st.button("🧹 Noise Reduce Karein"):
-    with st.spinner("⏳ Noise reduce ho rahi hai..."):
+  if st.button("🧹 reduce your voice "):
+    with st.spinner("⏳ Noise reducing..."):
       # Audio data read karein
       data, rate = sf.read(audio_file)
 
@@ -32,8 +32,8 @@ if audio_file is not None:
       sf.write(output_path, reduced_audio, rate)
 
       st.success(
-          "✅ Noise successfully reduce ho chuki hai aur 'output_cleaned.wav'"
-          " ban gayi hai!"
+          "✅ Noise successfully reduced 'output_cleaned.wav'"
+          " updated!"
       )
 
       # Cleaned audio play karein
