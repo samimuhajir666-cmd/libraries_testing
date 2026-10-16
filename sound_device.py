@@ -1,6 +1,6 @@
+import noisereduce as nr
 import numpy as np
 import soundfile as sf
-import noisereduce as nr
 import streamlit as st
 
 st.title("🎙️ noice cancelation from noice reduce library")
