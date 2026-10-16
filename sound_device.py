@@ -1,5 +1,4 @@
 import numpy as np
-import sounddevice as sd
 import soundfile as sf
 import noisereduce as nr
 import streamlit as st
