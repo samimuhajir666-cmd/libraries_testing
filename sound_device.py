@@ -5,14 +5,16 @@ import numpy as np
 import soundfile as sf
 import streamlit as st
 
-st.title("🎙️ Noise Reduction App")
-st.write("Record, clean, and manage your audio clearly.")
+st.title("🎙️ Auto Noise Reduction App")
+st.write(
+    "Record audio, and noise reduction is applied automatically right away!"
+)
 
 # Create a folder for recordings
 os.makedirs("saved_recordings", exist_ok=True)
 
 # Streamlit audio recorder
-audio_file = st.audio_input("🔴 Click here to start a new recording:")
+audio_file = st.audio_input("🔴 Click here to record audio:")
 
 if audio_file is not None:
   # Create a unique timestamp
@@ -26,29 +28,48 @@ if audio_file is not None:
   if len(data.shape) > 1:
     data = np.mean(data, axis=1)
 
-  # Save original noisy audio
+  # 1. Save original noisy audio
   sf.write(noisy_filename, data, rate)
 
-  st.subheader("🔊 Current Recorded Audio:")
-  st.audio(noisy_filename, format="audio/wav")
+  # 2. Automatically apply noise reduction immediately
+  with st.spinner("⏳ Automatically reducing noise..."):
+    reduced_audio = nr.reduce_noise(y=data, sr=rate)
+    sf.write(cleaned_filename, reduced_audio, rate)
 
-  if st.button("🧹 Reduce Noise and Save"):
-    with st.spinner("⏳ Reducing noise..."):
-      # Apply noise reduction
-      reduced_audio = nr.reduce_noise(y=data, sr=rate)
+  st.success("✨ Recording saved and noise reduction applied automatically!")
 
-      # Save clean audio
-      sf.write(cleaned_filename, reduced_audio, rate)
+  # Display latest recording side-by-side
+  col1, col2 = st.columns(2)
 
-      st.success("✨ Cleaned file saved successfully!")
-      st.audio(cleaned_filename, format="audio/wav")
+  with col1:
+    st.markdown("### 🔊 Latest Original")
+    st.audio(noisy_filename, format="audio/wav")
+    with open(noisy_filename, "rb") as f:
+      st.download_button(
+          label="📥 Download Noisy",
+          data=f,
+          file_name=f"noisy_{timestamp}.wav",
+          mime="audio/wav",
+          key=f"latest_noisy_{timestamp}",
+      )
 
-# --- Organized History Section (Grouped by Session Timestamp) ---
+  with col2:
+    st.markdown("### 🎧 Latest Cleaned")
+    st.audio(cleaned_filename, format="audio/wav")
+    with open(cleaned_filename, "rb") as f:
+      st.download_button(
+          label="📥 Download Cleaned",
+          data=f,
+          file_name=f"cleaned_{timestamp}.wav",
+          mime="audio/wav",
+          key=f"latest_cleaned_{timestamp}",
+      )
+
+# --- Organized History Section ---
 st.markdown("---")
-st.subheader("📂 Saved Recording Sessions")
+st.subheader("📂 Past Recording Sessions")
 
 all_files = os.listdir("saved_recordings")
-# Extract unique timestamps from noisy files
 timestamps = sorted(
     [
         f.replace("noisy_", "").replace(".wav", "")
@@ -59,9 +80,8 @@ timestamps = sorted(
 )
 
 if timestamps:
-  # Select session by readable timestamp format
   selected_session = st.selectbox(
-      "Select a recording session:",
+      "Select a past session:",
       timestamps,
       format_func=lambda x: f"Session: {x[:4]}-{x[4:6]}-{x[6:8]} at {x[9:11]}:{x[11:13]}:{x[13:15]}",
   )
@@ -70,7 +90,6 @@ if timestamps:
     noisy_path = f"saved_recordings/noisy_{selected_session}.wav"
     cleaned_path = f"saved_recordings/cleaned_{selected_session}.wav"
 
-    # Display original and cleaned side by side
     col1, col2 = st.columns(2)
 
     with col1:
@@ -83,7 +102,7 @@ if timestamps:
               data=f,
               file_name=f"noisy_{selected_session}.wav",
               mime="audio/wav",
-              key=f"noisy_{selected_session}",
+              key=f"hist_noisy_{selected_session}",
           )
 
     with col2:
@@ -96,9 +115,7 @@ if timestamps:
               data=f,
               file_name=f"cleaned_{selected_session}.wav",
               mime="audio/wav",
-              key=f"cleaned_{selected_session}",
+              key=f"hist_cleaned_{selected_session}",
           )
-      else:
-        st.info("Noise reduction was not applied for this session yet.")
 else:
   st.info("No recordings saved yet.")
