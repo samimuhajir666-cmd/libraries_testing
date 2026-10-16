@@ -6,7 +6,7 @@ import soundfile as sf
 import streamlit as st
 
 st.title("🎙️ Noise Reduction App")
-st.write("Record, clean, and manage your audio cleanly.")
+st.write("Record, clean, and manage your audio clearly.")
 
 # Create a folder for recordings
 os.makedirs("saved_recordings", exist_ok=True)
@@ -43,26 +43,62 @@ if audio_file is not None:
       st.success("✨ Cleaned file saved successfully!")
       st.audio(cleaned_filename, format="audio/wav")
 
-# --- Clean History Section (Using a Dropdown instead of a messy list) ---
+# --- Organized History Section (Grouped by Session Timestamp) ---
 st.markdown("---")
-st.subheader("📂 Saved Recordings History")
+st.subheader("📂 Saved Recording Sessions")
 
-saved_files = sorted(os.listdir("saved_recordings"), reverse=True)
+all_files = os.listdir("saved_recordings")
+# Extract unique timestamps from noisy files
+timestamps = sorted(
+    [
+        f.replace("noisy_", "").replace(".wav", "")
+        for f in all_files
+        if f.startswith("noisy_")
+    ],
+    reverse=True,
+)
 
-if saved_files:
-  # Selectbox keeps the UI clean by showing only one file's options at a time
-  selected_file = st.selectbox("Select a recording to view:", saved_files)
+if timestamps:
+  # Select session by readable timestamp format
+  selected_session = st.selectbox(
+      "Select a recording session:",
+      timestamps,
+      format_func=lambda x: f"Session: {x[:4]}-{x[4:6]}-{x[6:8]} at {x[9:11]}:{x[11:13]}:{x[13:15]}",
+  )
 
-  if selected_file:
-    file_path = os.path.join("saved_recordings", selected_file)
-    st.audio(file_path)
+  if selected_session:
+    noisy_path = f"saved_recordings/noisy_{selected_session}.wav"
+    cleaned_path = f"saved_recordings/cleaned_{selected_session}.wav"
 
-    with open(file_path, "rb") as f:
-      st.download_button(
-          label=f"📥 Download {selected_file}",
-          data=f,
-          file_name=selected_file,
-          mime="audio/wav",
-      )
+    # Display original and cleaned side by side
+    col1, col2 = st.columns(2)
+
+    with col1:
+      st.markdown("### 🔊 Original Noisy")
+      if os.path.exists(noisy_path):
+        st.audio(noisy_path, format="audio/wav")
+        with open(noisy_path, "rb") as f:
+          st.download_button(
+              label="📥 Download Noisy",
+              data=f,
+              file_name=f"noisy_{selected_session}.wav",
+              mime="audio/wav",
+              key=f"noisy_{selected_session}",
+          )
+
+    with col2:
+      st.markdown("### 🎧 Cleaned Audio")
+      if os.path.exists(cleaned_path):
+        st.audio(cleaned_path, format="audio/wav")
+        with open(cleaned_path, "rb") as f:
+          st.download_button(
+              label="📥 Download Cleaned",
+              data=f,
+              file_name=f"cleaned_{selected_session}.wav",
+              mime="audio/wav",
+              key=f"cleaned_{selected_session}",
+          )
+      else:
+        st.info("Noise reduction was not applied for this session yet.")
 else:
   st.info("No recordings saved yet.")
