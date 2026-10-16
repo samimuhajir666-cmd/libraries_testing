@@ -3,42 +3,39 @@ import numpy as np
 import soundfile as sf
 import streamlit as st
 
-st.title("🎙️ noice cancelation from noice reduce library")
+st.title("🎙️ Noise Cancellation from noisereduce library")
 st.write(
-    "start your recording from given botton "
-    " remove loudness!"
+    "Neeche diye gaye button se audio record karein aur wind noise hatayein!"
 )
 
-# 1. Recording duration set karein
-duration = 20 # Seconds
-sample_rate = 44100
+# Streamlit ka built-in audio recorder (Cloud aur Mobile dono par perfectly chalta hai)
+audio_file = st.audio_input("🔴 Yahan click karke recording shuru karein:")
 
-if st.button("🔴 Start Recording "):
-  with st.spinner(
-      "🎙️ recording start... !"
-  ):
-    # Mic se audio record karein
-    audio_data = sd.rec(
-        int(duration * sample_rate),
-        samplerate=sample_rate,
-        channels=1,
-        dtype="float32",
-    )
-    sd.wait()
+if audio_file is not None:
+  st.subheader("🔊 Original Noisy Audio:")
+  st.audio(audio_file, format="audio/wav")
 
-    # File save karein
-    sf.write("sample_noisy.wav", audio_data, sample_rate)
-    st.success("✅ Recording completed  'sample_noisy.wav' build !")
+  if st.button("🧹 Noise Reduce Karein"):
+    with st.spinner("⏳ Noise reduce ho rahi hai..."):
+      # Audio data read karein
+      data, rate = sf.read(audio_file)
 
-    # Original audio play karein
-    st.subheader("🔊 Original Noisy Audio:")
-    st.audio("sample_noisy.wav", format="audio/wav")
+      # Agar stereo ho toh mono mein convert karein
+      if len(data.shape) > 1:
+        data = np.mean(data, axis=1)
 
-    # Noise reduce karein
-    with st.spinner("🧹 Noise reduce ho rahi hai..."):
-      reduced_audio = nr.reduce_noise(y=audio_data.flatten(), sr=sample_rate)
-      sf.write("output_cleaned.wav", reduced_audio, sample_rate)
+      # Noise reduce apply karein
+      reduced_audio = nr.reduce_noise(y=data, sr=rate)
 
-    # Cleaned audio play karein
-    st.subheader("🎧 Cleaned Audio (Output):")
-    st.audio("output_cleaned.wav", format="audio/wav")
+      # Clean audio save karein
+      output_path = "output_cleaned.wav"
+      sf.write(output_path, reduced_audio, rate)
+
+      st.success(
+          "✅ Noise successfully reduce ho chuki hai aur 'output_cleaned.wav'"
+          " ban gayi hai!"
+      )
+
+      # Cleaned audio play karein
+      st.subheader("🎧 Cleaned Audio (Output):")
+      st.audio(output_path, format="audio/wav")
