@@ -16,7 +16,11 @@ st.set_page_config(
 st.sidebar.title("🎛️ Navigation Menu")
 app_mode = st.sidebar.radio(
     "Choose Tool Mode:",
-    ["🎙️ Noise Reduction", "🔥 TorchAudio & AI Processing"],
+    [
+        "🎙️ Noise Reduction",
+        "🔥 TorchAudio & AI Processing",
+        "🌪️ DeepFilterNet + Polish Pipeline",
+    ],
 )
 
 # ----------------------------------------------------
@@ -223,3 +227,109 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
             )
         else:
           st.info("Audio is already at 16kHz sample rate!")
+
+
+# ----------------------------------------------------
+# MODE 3: DEEPFILTERNET + NOISEREDUCE PIPELINE
+# ----------------------------------------------------
+elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
+  st.title("🌪️ DeepFilterNet & AI Dual-Layer Pipeline")
+  st.write(
+      "Record audio with wind or heavy interference. Stage 1: DeepFilterNet"
+      " removes wind/heavy noise. Stage 2: Noisereduce polishes the result!"
+  )
+
+  # Create folder for deepfilter outputs
+  os.makedirs("deepfilter_recordings", exist_ok=True)
+
+  audio_file_df = st.audio_input(
+      "🔴 Click here to record audio for DeepFilterNet Pipeline:"
+  )
+
+  if audio_file_df is not None:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    noisy_path = f"deepfilter_recordings/raw_{timestamp}.wav"
+    df_cleaned_path = f"deepfilter_recordings/df_cleaned_{timestamp}.wav"
+    fully_polished_path = f"deepfilter_recordings/polished_{timestamp}.wav"
+
+    # Save raw audio
+    with open(noisy_path, "wb") as f:
+      f.write(audio_file_df.getbuffer())
+
+    data, rate = sf.read(noisy_path)
+    if len(data.shape) > 1:
+      data = np.mean(data, axis=1)
+
+    with st.spinner(
+        "🌪️ Stage 1: Running DeepFilterNet (Removing Wind & Heavy Noise)..."
+    ):
+      try:
+        from df.enhance import enhance, init_df
+
+        # Initialize model (cached or loaded)
+        model, df_state, _ = init_df()
+
+        # Convert to tensor and resample to model's expected rate if needed
+        waveform = torch.tensor(data, dtype=torch.float32).unsqueeze(0)
+
+        if rate != df_state.sr():
+          resampler = torchaudio.transforms.Resample(
+              orig_freq=rate, new_freq=df_state.sr()
+          )
+          waveform_resampled = resampler(waveform)
+        else:
+          waveform_resampled = waveform
+
+        # Run DeepFilterNet enhancement
+        enhanced_waveform = enhance(model, df_state, waveform_resampled)
+
+        # Resample back to original rate if necessary for saving
+        if df_state.sr() != rate:
+          back_resampler = torchaudio.transforms.Resample(
+              orig_freq=df_state.sr(), new_freq=rate
+          )
+          enhanced_waveform = back_resampler(enhanced_waveform)
+
+        df_cleaned_data = enhanced_waveform.squeeze(0).numpy()
+        sf.write(df_cleaned_path, df_cleaned_data, rate)
+
+      except Exception as e:
+        st.warning(
+            f"DeepFilterNet running in fallback mode due to environment setup:"
+            f" {e}"
+        )
+        df_cleaned_data = data
+        sf.write(df_cleaned_path, df_cleaned_data, rate)
+
+    with st.spinner(
+        "✨ Stage 2: Running Noisereduce (Polishing Crystal Clear Sound)..."
+    ):
+      polished_data = nr.reduce_noise(y=df_cleaned_data, sr=rate)
+      sf.write(fully_polished_path, polished_data, rate)
+
+    st.success("🎉 Dual-Layer AI Pipeline Completed Successfully!")
+
+    # Display 3-column comparison
+    with st.container(border=True):
+      st.subheader("📊 Pipeline Results Comparison")
+      col1, col2, col3 = st.columns(3)
+
+      with col1:
+        st.markdown("### 🔊 1. Raw Noisy")
+        st.audio(noisy_path, format="audio/wav")
+
+      with col2:
+        st.markdown("### 🌪️ 2. DeepFiltered")
+        st.audio(df_cleaned_path, format="audio/wav")
+
+      with col3:
+        st.markdown("### ✨ 3. Fully Polished")
+        st.audio(fully_polished_path, format="audio/wav")
+        with open(fully_polished_path, "rb") as f:
+          st.download_button(
+              label="📥 Download Final Cleaned",
+              data=f,
+              file_name=f"polished_{timestamp}.wav",
+              mime="audio/wav",
+              key=f"download_polished_{timestamp}",
+          )
