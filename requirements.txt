@@ -1,4 +1,7 @@
 streamlit
 noisereduce
-soundfile
 numpy
+soundfile
+torch
+torchaudio
+openai-whisper
