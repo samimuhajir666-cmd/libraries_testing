@@ -5,4 +5,4 @@ soundfile
 torch
 torchaudio
 openai-whisper
-deepfilternet
+
