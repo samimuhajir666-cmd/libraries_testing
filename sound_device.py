@@ -156,7 +156,7 @@ if app_mode == "🎙️ Noise Reduction":
 
 
 # ----------------------------------------------------
-# MODE 2: TORCHAUDIO & AI PROCESSING (Updated with Live Recorder)
+# MODE 2: TORCHAUDIO & AI PROCESSING
 # ----------------------------------------------------
 elif app_mode == "🔥 TorchAudio & AI Processing":
   st.title("🔥 TorchAudio & Advanced AI Processing")
@@ -180,8 +180,8 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
     with open(temp_path, "wb") as f:
       f.write(audio_file_torch.getbuffer())
 
-    # Load with Torchaudio
-    waveform, sample_rate = torchaudio.load(temp_path)
+    # Load with Torchaudio using soundfile backend to bypass torchcodec error[cite: 2]
+    waveform, sample_rate = torchaudio.load(temp_path, backend="soundfile")
 
     with st.container(border=True):
       st.subheader("📈 PyTorch Tensor Analysis")
