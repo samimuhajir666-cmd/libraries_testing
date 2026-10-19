@@ -180,8 +180,11 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
     with open(temp_path, "wb") as f:
       f.write(audio_file_torch.getbuffer())
 
-    # Load with Torchaudio using soundfile backend to bypass torchcodec error[cite: 2]
-    waveform, sample_rate = torchaudio.load(temp_path, backend="soundfile")
+    # Safely load audio using soundfile and convert to PyTorch Tensor to bypass torchcodec error
+    data_np, sample_rate = sf.read(temp_path)
+    if len(data_np.shape) > 1:
+      data_np = np.mean(data_np, axis=1)
+    waveform = torch.tensor(data_np, dtype=torch.float32).unsqueeze(0)
 
     with st.container(border=True):
       st.subheader("📈 PyTorch Tensor Analysis")
