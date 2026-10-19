@@ -156,26 +156,29 @@ if app_mode == "🎙️ Noise Reduction":
 
 
 # ----------------------------------------------------
-# MODE 2: TORCHAUDIO & AI PROCESSING
+# MODE 2: TORCHAUDIO & AI PROCESSING (Updated with Live Recorder)
 # ----------------------------------------------------
 elif app_mode == "🔥 TorchAudio & AI Processing":
   st.title("🔥 TorchAudio & Advanced AI Processing")
   st.write(
-      "Load audio into PyTorch Tensors, check shapes, resample to 16kHz, and"
-      " prepare for AI models!"
+      "Record audio live, load it into PyTorch Tensors, check shapes, resample"
+      " to 16kHz, and prepare for AI models!"
   )
 
   # Create folder for torch outputs
   os.makedirs("torch_recordings", exist_ok=True)
 
-  uploaded_torch_file = st.file_uploader(
-      "Upload an audio file for TorchAudio analysis:", type=["wav", "mp3"]
+  # Live audio recorder for TorchAudio analysis
+  audio_file_torch = st.audio_input(
+      "🔴 Click here to record audio for TorchAudio analysis:"
   )
 
-  if uploaded_torch_file is not None:
-    temp_path = "torch_recordings/temp_uploaded.wav"
+  if audio_file_torch is not None:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    temp_path = f"torch_recordings/recorded_{timestamp}.wav"
+
     with open(temp_path, "wb") as f:
-      f.write(uploaded_torch_file.getbuffer())
+      f.write(audio_file_torch.getbuffer())
 
     # Load with Torchaudio
     waveform, sample_rate = torchaudio.load(temp_path)
@@ -189,7 +192,7 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
       st.audio(temp_path, format="audio/wav")
 
       # Resampling option to 16kHz for AI models
-      if st.button("⚡ Resample to 16kHz (AI Ready)"):
+      if st.button("⚡ Resample to 16kHz (AI Ready)", key=f"resample_{timestamp}"):
         target_sr = 16000
         if sample_rate != target_sr:
           resampler = torchaudio.transforms.Resample(
@@ -197,7 +200,7 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
           )
           resampled_waveform = resampler(waveform)
 
-          resampled_path = "torch_recordings/resampled_16k.wav"
+          resampled_path = f"torch_recordings/resampled_16k_{timestamp}.wav"
           torchaudio.save(resampled_path, resampled_waveform, target_sr)
 
           st.success("✅ Successfully resampled to 16kHz!")
@@ -211,8 +214,9 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
             st.download_button(
                 label="📥 Download 16kHz Audio",
                 data=f,
-                file_name="resampled_16kHz.wav",
+                file_name=f"resampled_16kHz_{timestamp}.wav",
                 mime="audio/wav",
+                key=f"download_16k_{timestamp}",
             )
         else:
           st.info("Audio is already at 16kHz sample rate!")
