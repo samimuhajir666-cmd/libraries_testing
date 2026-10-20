@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import subprocess
 import noisereduce as nr
 import numpy as np
 import soundfile as sf
@@ -20,6 +21,7 @@ app_mode = st.sidebar.radio(
         "🎙️ Noise Reduction",
         "🔥 TorchAudio & AI Processing",
         "🌪️ DeepFilterNet + Polish Pipeline",
+        "🎶 Meta Demucs Separation",
     ],
 )
 
@@ -33,35 +35,26 @@ if app_mode == "🎙️ Noise Reduction":
       " sessions easily!"
   )
 
-  # Create a folder for recordings
   os.makedirs("saved_recordings", exist_ok=True)
-
-  # Streamlit audio recorder
   audio_file = st.audio_input("🔴 Click here to record audio:")
 
   if audio_file is not None:
-    # Create a unique timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     noisy_filename = f"saved_recordings/noisy_{timestamp}.wav"
     cleaned_filename = f"saved_recordings/cleaned_{timestamp}.wav"
 
-    # Read audio data
     data, rate = sf.read(audio_file)
-
     if len(data.shape) > 1:
       data = np.mean(data, axis=1)
 
-    # 1. Save original noisy audio
     sf.write(noisy_filename, data, rate)
 
-    # 2. Automatically apply noise reduction immediately
     with st.spinner("⏳ Automatically reducing noise..."):
       reduced_audio = nr.reduce_noise(y=data, sr=rate)
       sf.write(cleaned_filename, reduced_audio, rate)
 
     st.success("✨ Recording saved and noise reduction applied automatically!")
 
-    # Display latest audio players side-by-side using a bordered container
     with st.container(border=True):
       st.subheader("📊 Latest Session Output")
       col1, col2 = st.columns(2)
@@ -90,7 +83,6 @@ if app_mode == "🎙️ Noise Reduction":
               key=f"latest_cleaned_{timestamp}",
           )
 
-  # --- Organized History Section ---
   st.markdown("---")
   st.subheader("📂 Past Recording Sessions")
 
@@ -136,9 +128,6 @@ if app_mode == "🎙️ Noise Reduction":
                     mime="audio/wav",
                     key=f"hist_noisy_{selected_session}",
                 )
-            else:
-              st.warning("Noisy file not found.")
-
           with col2:
             st.markdown("### 🎧 Cleaned Audio")
             if os.path.exists(cleaned_path):
@@ -151,12 +140,6 @@ if app_mode == "🎙️ Noise Reduction":
                     mime="audio/wav",
                     key=f"hist_cleaned_{selected_session}",
                 )
-            else:
-              st.warning("Cleaned file not found.")
-    else:
-      st.info("No past sessions found yet.")
-  else:
-    st.info("No recordings directory found.")
 
 
 # ----------------------------------------------------
@@ -169,10 +152,7 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
       " to 16kHz, and prepare for AI models!"
   )
 
-  # Create folder for torch outputs
   os.makedirs("torch_recordings", exist_ok=True)
-
-  # Live audio recorder for TorchAudio analysis
   audio_file_torch = st.audio_input(
       "🔴 Click here to record audio for TorchAudio analysis:"
   )
@@ -184,7 +164,6 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
     with open(temp_path, "wb") as f:
       f.write(audio_file_torch.getbuffer())
 
-    # Safely load audio using soundfile and convert to PyTorch Tensor
     data_np, sample_rate = sf.read(temp_path)
     if len(data_np.shape) > 1:
       data_np = np.mean(data_np, axis=1)
@@ -194,11 +173,8 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
       st.subheader("📈 PyTorch Tensor Analysis")
       st.write(f"**Original Sample Rate:** {sample_rate} Hz")
       st.write(f"**Waveform Tensor Shape:** `{waveform.shape}` (Channels, Samples)")
-
-      # Play audio
       st.audio(temp_path, format="audio/wav")
 
-      # Resampling option to 16kHz for AI models
       if st.button("⚡ Resample to 16kHz (AI Ready)", key=f"resample_{timestamp}"):
         target_sr = 16000
         if sample_rate != target_sr:
@@ -211,10 +187,6 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
           torchaudio.save(resampled_path, resampled_waveform, target_sr)
 
           st.success("✅ Successfully resampled to 16kHz!")
-          st.write(
-              f"**New Waveform Shape:** `{resampled_waveform.shape}` at"
-              f" {target_sr} Hz"
-          )
           st.audio(resampled_path, format="audio/wav")
 
           with open(resampled_path, "rb") as f:
@@ -225,8 +197,6 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
                 mime="audio/wav",
                 key=f"download_16k_{timestamp}",
             )
-        else:
-          st.info("Audio is already at 16kHz sample rate!")
 
 
 # ----------------------------------------------------
@@ -239,9 +209,7 @@ elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
       " removes wind/heavy noise. Stage 2: Noisereduce polishes the result!"
   )
 
-  # Create folder for deepfilter outputs
   os.makedirs("deepfilter_recordings", exist_ok=True)
-
   audio_file_df = st.audio_input(
       "🔴 Click here to record audio for DeepFilterNet Pipeline:"
   )
@@ -252,7 +220,6 @@ elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
     df_cleaned_path = f"deepfilter_recordings/df_cleaned_{timestamp}.wav"
     fully_polished_path = f"deepfilter_recordings/polished_{timestamp}.wav"
 
-    # Save raw audio
     with open(noisy_path, "wb") as f:
       f.write(audio_file_df.getbuffer())
 
@@ -266,10 +233,7 @@ elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
       try:
         from df.enhance import enhance, init_df
 
-        # Initialize model
         model, df_state, _ = init_df()
-
-        # Convert to tensor and resample to model's expected rate if needed
         waveform = torch.tensor(data, dtype=torch.float32).unsqueeze(0)
 
         if rate != df_state.sr():
@@ -280,10 +244,8 @@ elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
         else:
           waveform_resampled = waveform
 
-        # Run DeepFilterNet enhancement
         enhanced_waveform = enhance(model, df_state, waveform_resampled)
 
-        # Resample back to original rate if necessary for saving
         if df_state.sr() != rate:
           back_resampler = torchaudio.transforms.Resample(
               orig_freq=df_state.sr(), new_freq=rate
@@ -309,7 +271,6 @@ elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
 
     st.success("🎉 Dual-Layer AI Pipeline Completed Successfully!")
 
-    # Display 3-column comparison with individual download buttons
     with st.container(border=True):
       st.subheader("📊 Pipeline Results Comparison")
       col1, col2, col3 = st.columns(3)
@@ -349,3 +310,77 @@ elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
               mime="audio/wav",
               key=f"download_polished_{timestamp}",
           )
+
+
+# ----------------------------------------------------
+# MODE 4: META DEMUCS SOURCE SEPARATION
+# ----------------------------------------------------
+elif app_mode == "🎶 Meta Demucs Separation":
+  st.title("🎶 Meta Demucs Advanced Audio Separation")
+  st.write(
+      "Using Meta's state-of-the-art Demucs model to isolate vocals and clean"
+      " complex background noise!"
+  )
+
+  os.makedirs("demucs_recordings", exist_ok=True)
+  audio_file_demucs = st.audio_input(
+      "🔴 Click here to record audio for Demucs Separation:"
+  )
+
+  if audio_file_demucs is not None:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    raw_demucs_path = f"demucs_recordings/raw_{timestamp}.wav"
+
+    with open(raw_demucs_path, "wb") as f:
+      f.write(audio_file_demucs.getbuffer())
+
+    with st.spinner(
+        "🎶 Running Meta Demucs Model (Isolating Vocals & Removing Noise)..."
+    ):
+      try:
+        cmd = [
+            "python",
+            "-m",
+            "demucs.separate",
+            "-n",
+            "htdemucs",
+            "--two-stems",
+            "vocals",
+            raw_demucs_path,
+            "-o",
+            "demucs_recordings/output",
+        ]
+        subprocess.run(cmd, check=True)
+
+        base_name = os.path.splitext(os.path.basename(raw_demucs_path))[0]
+        isolated_vocal_path = os.path.join(
+            "demucs_recordings", "output", "htdemucs", base_name, "vocals.wav"
+        )
+
+        st.success("🎉 Meta Demucs Separation Completed Successfully!")
+
+        with st.container(border=True):
+          st.subheader("📊 Demucs Isolation Results")
+          col1, col2 = st.columns(2)
+
+          with col1:
+            st.markdown("### 🔊 Original Mixed Audio")
+            st.audio(raw_demucs_path, format="audio/wav")
+
+          with col2:
+            st.markdown("### 🎤 Isolated Clean Vocals")
+            if os.path.exists(isolated_vocal_path):
+              st.audio(isolated_vocal_path, format="audio/wav")
+              with open(isolated_vocal_path, "rb") as f:
+                st.download_button(
+                    label="📥 Download Isolated Vocals",
+                    data=f,
+                    file_name=f"isolated_vocals_{timestamp}.wav",
+                    mime="audio/wav",
+                    key=f"download_demucs_{timestamp}",
+                )
+            else:
+              st.warning("Isolated vocal file path could not be resolved.")
+
+      except Exception as e:
+        st.error(f"Error running Demucs: {e}")
