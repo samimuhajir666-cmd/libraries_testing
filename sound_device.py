@@ -350,7 +350,10 @@ elif app_mode == "🎶 Meta Demucs Separation":
             "-o",
             "demucs_recordings/output",
         ]
-        subprocess.run(cmd, check=True)
+        # Capture stdout and stderr to show exact error if it fails
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, check=True
+        )
 
         base_name = os.path.splitext(os.path.basename(raw_demucs_path))[0]
         isolated_vocal_path = os.path.join(
@@ -382,5 +385,16 @@ elif app_mode == "🎶 Meta Demucs Separation":
             else:
               st.warning("Isolated vocal file path could not be resolved.")
 
+      except subprocess.CalledProcessError as e:
+        st.error(
+            f"Demucs Execution Failed (Exit Code: {e.returncode}). Check logs"
+            " below:"
+        )
+        st.code(e.stderr)
+        st.info(
+            "💡 Note: Meta Demucs is a heavy model and requires FFmpeg + high"
+            " RAM. If you are on Streamlit Cloud, it may fail due to memory"
+            " limits. Try running locally on your PC!"
+        )
       except Exception as e:
         st.error(f"Error running Demucs: {e}")
