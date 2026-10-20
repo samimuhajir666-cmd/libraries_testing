@@ -184,7 +184,7 @@ elif app_mode == "🔥 TorchAudio & AI Processing":
     with open(temp_path, "wb") as f:
       f.write(audio_file_torch.getbuffer())
 
-    # Safely load audio using soundfile and convert to PyTorch Tensor to bypass torchcodec error
+    # Safely load audio using soundfile and convert to PyTorch Tensor
     data_np, sample_rate = sf.read(temp_path)
     if len(data_np.shape) > 1:
       data_np = np.mean(data_np, axis=1)
@@ -266,7 +266,7 @@ elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
       try:
         from df.enhance import enhance, init_df
 
-        # Initialize model (cached or loaded)
+        # Initialize model
         model, df_state, _ = init_df()
 
         # Convert to tensor and resample to model's expected rate if needed
@@ -309,7 +309,7 @@ elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
 
     st.success("🎉 Dual-Layer AI Pipeline Completed Successfully!")
 
-    # Display 3-column comparison
+    # Display 3-column comparison with individual download buttons
     with st.container(border=True):
       st.subheader("📊 Pipeline Results Comparison")
       col1, col2, col3 = st.columns(3)
@@ -317,17 +317,33 @@ elif app_mode == "🌪️ DeepFilterNet + Polish Pipeline":
       with col1:
         st.markdown("### 🔊 1. Raw Noisy")
         st.audio(noisy_path, format="audio/wav")
+        with open(noisy_path, "rb") as f:
+          st.download_button(
+              label="📥 Download Raw",
+              data=f,
+              file_name=f"raw_{timestamp}.wav",
+              mime="audio/wav",
+              key=f"download_raw_{timestamp}",
+          )
 
       with col2:
         st.markdown("### 🌪️ 2. DeepFiltered")
         st.audio(df_cleaned_path, format="audio/wav")
+        with open(df_cleaned_path, "rb") as f:
+          st.download_button(
+              label="📥 Download Filtered",
+              data=f,
+              file_name=f"df_cleaned_{timestamp}.wav",
+              mime="audio/wav",
+              key=f"download_df_{timestamp}",
+          )
 
       with col3:
         st.markdown("### ✨ 3. Fully Polished")
         st.audio(fully_polished_path, format="audio/wav")
         with open(fully_polished_path, "rb") as f:
           st.download_button(
-              label="📥 Download Final Cleaned",
+              label="📥 Download Final",
               data=f,
               file_name=f"polished_{timestamp}.wav",
               mime="audio/wav",
