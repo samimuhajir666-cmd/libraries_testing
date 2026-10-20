@@ -6,3 +6,4 @@ torch
 torchaudio
 openai-whisper
 deepfilternet
+demucs
