@@ -1,3 +1,4 @@
 build-essential
 cargo
 rustc
+ffmpeg
